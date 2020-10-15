@@ -1,0 +1,28 @@
+name: Scrape latest data
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron:  '0 0 7 * *'
+
+jobs:
+  scheduled:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out this repo
+      uses: actions/checkout@v2
+    - name: Fetch latest data
+      run: |-
+        curl https://data.seattle.gov/api/views/tazs-3rd5/rows.csv?accessType=DOWNLOAD > raw.csv
+        head -n 1 raw.csv > data/seattle-crime-data.csv
+        grep '^\(2018\|2019\|2020\)-' raw.csv | sort -r >> data/seattle-crime-data.csv
+        rm raw.csv
+    - name: Commit and push if it changed
+      run: |-
+        git config user.name "Automated"
+        git config user.email "actions@users.noreply.github.com"
+        git add -A
+        timestamp=$(date -u)
+        git commit -m "Latest data: ${timestamp}" || exit 0
+        git push
